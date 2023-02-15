@@ -32,6 +32,17 @@ FROM prescriber;
 
 SELECT SUM(total_claim_count) AS total_claims
 FROM prescription;
+--Thinking my way thru the question
+
+SELECT prescriber.npi,
+	SUM(total_claim_count) AS sum_total_claims
+FROM prescriber
+LEFT JOIN prescription
+ON prescriber.npi=prescription.npi
+GROUP by prescriber.npi
+ORDER BY sum_total_claims DESC;
+--LEFT JOIN Returns NULL in SUM Total Claims Column
+--Move Over to Use a INNER JOIN to Remove NULL Values
 
 SELECT prescriber.npi,
 	SUM(total_claim_count) AS sum_total_claims
@@ -40,12 +51,32 @@ INNER JOIN prescription
 ON prescriber.npi=prescription.npi
 GROUP by prescriber.npi
 ORDER BY sum_total_claims DESC;
+--LEFT JOIN Returned Results w/o NULL Values as Expected
 
---TESTTESTTEST
+--ANSWER: Highest Claims NPI 1881634483 / Total Claims 99707
+
 --     b. Repeat the above, but this time report the nppes_provider_first_name, nppes_provider_last_org_name,  specialty_description, and the total number of claims.
+
+SELECT nppes_provider_last_org_name AS last_name,
+	nppes_provider_first_name AS first_name, 
+	specialty_description AS specialty, 
+	SUM(total_claim_count) AS sum_total_claims
+FROM prescriber AS p1
+INNER JOIN prescription AS p2
+USING (npi)
+GROUP BY last_name, first_name, specialty
+ORDER BY sum_total_claims DESC;
+
+--ANSWER: "PENDLEY"	"BRUCE"	"Family Practice"	Total CLaims "99707"
 
 -- 2. 
 --     a. Which specialty had the most total number of claims (totaled over all drugs)?
+
+SELECT specialty,
+	SUM(total_claim_count) AS sum_total_claims
+FROM presciber
+INNER JOIN prescription
+USING (npi)
 
 --     b. Which specialty had the most total number of claims for opioids?
 
