@@ -51,7 +51,7 @@ INNER JOIN prescription
 ON prescriber.npi=prescription.npi
 GROUP by prescriber.npi
 ORDER BY sum_total_claims DESC;
---LEFT JOIN Returned Results w/o NULL Values as Expected
+--INNER JOIN Returned Results w/o NULL Values as Expected
 
 --ANSWER: Highest Claims NPI 1881634483 / Total Claims 99707
 
@@ -65,20 +65,66 @@ FROM prescriber AS p1
 INNER JOIN prescription AS p2
 USING (npi)
 GROUP BY last_name, first_name, specialty
-ORDER BY sum_total_claims DESC;
+ORDER BY sum_total_claims DESC
+LIMIT 1;
 
---ANSWER: "PENDLEY"	"BRUCE"	"Family Practice"	Total CLaims "99707"
+--ANSWER: "PENDLEY"	"BRUCE" / "Family Practice"	/ Total CLaims "99707"
 
 -- 2. 
 --     a. Which specialty had the most total number of claims (totaled over all drugs)?
 
-SELECT specialty,
+SELECT specialty_description AS specialty,
 	SUM(total_claim_count) AS sum_total_claims
-FROM presciber
+FROM prescriber
+LEFT JOIN prescription
+USING (npi)
+GROUP BY specialty
+ORDER BY sum_total_claims DESC;
+--LEFT JOIN Returns NULLS as Expected...Left Join Matched Using NPI...LEFT JOIN will return all records in the left table, and those records in the right table that match on the joining field provided...Can Result in NULL values.   
+
+SELECT specialty_description AS specialty,
+	SUM(total_claim_count) AS sum_total_claims
+FROM prescriber
 INNER JOIN prescription
 USING (npi)
+GROUP BY specialty
+ORDER BY sum_total_claims DESC
+LIMIT 1;
+--INNER JOIN looks for records in both tables which match on a given field.
+
+--ANSWER: "Family Practice"	/ Total Claims "9752347"
 
 --     b. Which specialty had the most total number of claims for opioids?
+SELECT opioid_drug_flag
+FROM drug;
+
+SELECT specialty_description AS specialty,
+	SUM(total_claim_count) AS sum_opioid_claims
+FROM prescriber
+INNER JOIN prescription
+USING (npi)
+INNER JOIN drug
+USING (drug_name)
+WHERE opioid_drug_flag='Y'
+GROUP BY specialty
+ORDER BY sum_opioid_claims DESC
+LIMIT 5;
+
+SELECT specialty_description AS specialty,
+	SUM(total_claim_count) AS sum_opioid_claims
+FROM prescriber
+LEFT JOIN prescription
+USING (npi)
+LEFT JOIN drug
+USING (drug_name)
+WHERE opioid_drug_flag='Y'
+GROUP BY specialty
+ORDER BY sum_opioid_claims DESC
+LIMIT 5;
+--INNER JOIN and LEFT JOIN return the Same Results...Prescriber/Prescription KEY=npi...Prescription/Drug Key=Drug Name...Chaining KEYs Required to Pull Info from Drug to Prescriber. 
+--Used Limit of 5 for Comparison Purposes. 
+
+--ANSWER: "Nurse Practitioner" Total "900845"
 
 --     c. **Challenge Question:** Are there any specialties that appear in the prescriber table that have no associated prescriptions in the prescription table?
 
