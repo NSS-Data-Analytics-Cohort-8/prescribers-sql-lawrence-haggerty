@@ -259,17 +259,84 @@ USING (fipscounty)
 WHERE cbsaname LIKE '%TN%'
 GROUP BY cbsaname
 ORDER BY cbsa_combined_pop DESC;
+--Got it!
 
 --ANSWER: largest CBS combined population: "Nashville-Davidson--Murfreesboro--Franklin, TN" / 1830410
 
 --     c. What is the largest (in terms of population) county which is not included in a CBSA? Report the county name and population.
 
+SELECT 
+	cbsa,
+	county,
+	SUM(population) as cbsa_combined_pop
+FROM fips_county
+LEFT JOIN population
+USING (fipscounty)
+LEFT JOIN cbsa
+USING (fipscounty)
+WHERE state LIKE 'TN' 
+	AND cbsa IS NULL 
+	AND population IS NOT NULL
+GROUP BY cbsa, county
+ORDER BY cbsa_combined_pop DESC
+LIMIT 1;
+
+--ANSWER: largest county population (not included in a cbsa): "SEVIER"	/ pop: 95,523
+
 -- 6. 
 --     a. Find all rows in the prescription table where total_claims is at least 3000. Report the drug_name and the total_claim_count.
 
+SELECT drug_name, total_claim_count
+FROM prescription
+ORDER BY total_claim_count DESC;
+--looking at the full list
+
+SELECT 
+	drug_name,
+	total_claim_count
+FROM prescription
+WHERE total_claim_count >='3000'
+GROUP BY drug_name, total_claim_count
+ORDER BY total_claim_count DESC;
+--Answer: query above returns the requested info
+--9 rows of info OXYCODONE / 4538 top result, LEVOTHYROXINE SODIUM / 3023 bottom result
+
+
 --     b. For each instance that you found in part a, add a column that indicates whether the drug is an opioid.
 
+SELECT 
+	drug_name,
+	total_claim_count,
+	CASE WHEN opioid_drug_flag='Y' THEN 'Y'
+		 ELSE 'N' END AS opioid
+FROM prescription
+LEFT JOIN drug
+USING (drug_name)
+WHERE total_claim_count >='3000'
+GROUP BY drug_name, total_claim_count, opioid_drug_flag
+ORDER BY total_claim_count DESC;
+--Answer: query above returns the requested info
+--9 rows (w/ opioid notation) of info OXYCODONE / 4538 top result, LEVOTHYROXINE SODIUM / 3023 bottom result
+
+
 --     c. Add another column to you answer from the previous part which gives the prescriber first and last name associated with each row.
+
+SELECT 
+	drug_name,
+	total_claim_count,
+	CASE WHEN opioid_drug_flag='Y' THEN 'Y'
+		 ELSE 'N' END AS opioid,
+	CONCAT(nppes_provider_first_name,' ',nppes_provider_last_org_name) AS provider
+FROM prescription
+LEFT JOIN drug
+USING (drug_name)
+LEFT JOIN prescriber
+USING (npi)
+WHERE total_claim_count >='3000'
+GROUP BY drug_name, total_claim_count, opioid_drug_flag, nppes_provider_first_name,nppes_provider_last_org_name
+ORDER BY total_claim_count DESC;
+--Answer: query above returns the requested info
+--9 rows (w/ opioid notation) of info. top result: OXYCODONE / 4538 / DAVID COFFEY, bottom result: LEVOTHYROXINE SODIUM / 3023 bottom result / BRUCE PENDLEY
 
 -- 7. The goal of this exercise is to generate a full list of all pain management specialists in Nashville and the number of claims they had for each opioid. **Hint:** The results from all 3 parts will have 637 rows.
 
