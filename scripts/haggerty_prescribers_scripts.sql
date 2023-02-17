@@ -246,21 +246,21 @@ FROM cbsa
 INNER JOIN population
 USING (fipscounty)
 WHERE cbsaname LIKE '%TN%'
-GROUP BY cbsa, population
+GROUP BY cbsaname, population
 ORDER by cbsa;
 --Round 1...Multiple Returns for Each CBSA
 
 SELECT 
-	DISTINCT cbsa,
-	(SELECT SUM(population) 
-	 FROM population
-	 WHERE cbsa.fipscounty=population.fipscounty) as cbsa_combined_pop
+	cbsaname,
+	SUM(population) as cbsa_combined_pop
 FROM cbsa
+INNER JOIN population
+USING (fipscounty)
 WHERE cbsaname LIKE '%TN%'
-GROUP BY cbsa, cbsa.fipscounty;
+GROUP BY cbsaname
+ORDER BY cbsa_combined_pop DESC;
 
-
-
+--ANSWER: largest CBS combined population: "Nashville-Davidson--Murfreesboro--Franklin, TN" / 1830410
 
 --     c. What is the largest (in terms of population) county which is not included in a CBSA? Report the county name and population.
 
