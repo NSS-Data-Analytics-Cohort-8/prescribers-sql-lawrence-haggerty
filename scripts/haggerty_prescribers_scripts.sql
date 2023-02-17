@@ -109,6 +109,7 @@ WHERE opioid_drug_flag='Y'
 GROUP BY specialty
 ORDER BY sum_opioid_claims DESC
 LIMIT 5;
+--Ran w/ INNER JOIN now compare w/ LEFT JOIN
 
 SELECT specialty_description AS specialty,
 	SUM(total_claim_count) AS sum_opioid_claims
@@ -133,16 +134,93 @@ LIMIT 5;
 -- 3. 
 --     a. Which drug (generic_name) had the highest total drug cost?
 
+SELECT generic_name AS drug,
+	total_drug_cost 
+FROM drug
+LEFT JOIN prescription
+USING (drug_name)
+GROUP BY drug, total_drug_cost
+ORDER BY total_drug_cost DESC;
+--Significant Amount (>1000) of NULL for total_drug_cost based off of LEFT JOIN of prescription to drug. LEFT JOIN will return all records in the left table, and those records in the right table that match on the joining field provided
+
+SELECT generic_name AS drug,
+	total_drug_cost 
+FROM drug
+INNER JOIN prescription
+USING (drug_name)
+GROUP BY drug, total_drug_cost
+ORDER BY total_drug_cost DESC;
+--INNER JOIN produced cleaner results. INNER JOIN: looks for records in both tables which match on a given field.
+
+SELECT generic_name AS drug,
+	total_drug_cost 
+FROM prescription
+LEFT JOIN drug
+USING (drug_name)
+GROUP BY drug, total_drug_cost
+ORDER BY total_drug_cost DESC;
+LIMIT 1;
+--LEFT JOIN of drug to prescription returned the same as INNER JOIN above. 
+
+--ANSWER: "PIRFENIDONE"	/ Total Drug Cost "2829174.3"
+
 --     b. Which drug (generic_name) has the hightest total cost per day? **Bonus: Round your cost per day column to 2 decimal places. Google ROUND to see how this works.**
+
+SELECT *
+FROM prescription;
+--Reviewing Prescription Columns
+
+--Column Definitions:
+--total_drug_cost – The aggregate drug cost paid for all associated claims.
+--total_30_day_fill_count – The aggregate number of Medicare Part D standardized 30-day fills.
+--total_day_supply – The aggregate number of day’s supply for which this drug was dispensed.
+
+SELECT generic_name,
+	ROUND(AVG(total_drug_cost/total_30_day_fill_count),2) AS daily_cost
+FROM prescription
+LEFT JOIN drug
+USING (drug_name)
+GROUP BY generic_name
+ORDER BY daily_cost DESC;
+---Continue to Review
+---******************
 
 -- 4. 
 --     a. For each drug in the drug table, return the drug name and then a column named 'drug_type' which says 'opioid' for drugs which have opioid_drug_flag = 'Y', says 'antibiotic' for those drugs which have antibiotic_drug_flag = 'Y', and says 'neither' for all other drugs.
 
+SELECT 
+	drug_name,
+	CASE WHEN opioid_drug_flag='Y' THEN 'opioid'
+		 WHEN antibiotic_drug_flag='Y' THEN 'antibiotic'
+		 ELSE 'neither' END AS drug_type
+FROM drug;
+--CASE STATEMENT...Results Returned as Expected 
+
+SELECT 
+	drug_name,
+	CASE WHEN opioid_drug_flag='Y' THEN 'opioid'
+		 WHEN antibiotic_drug_flag='Y' THEN 'antibiotic'
+		 ELSE 'neither' END AS drug_type
+FROM drug
+WHERE opioid_drug_flag='Y' OR antibiotic_drug_flag='Y'
+ORDER BY drug_type;
+--SAME CASE STATEMENT Filtered to Show Opioids and Antibiotics Only
+
 --     b. Building off of the query you wrote for part a, determine whether more was spent (total_drug_cost) on opioids or on antibiotics. Hint: Format the total costs as MONEY for easier comparision.
+
+SELECT
+	SUM(CASE WHEN opioid_drug_flag='Y' THEN total_drug_cost END) AS opioid_total_cost,
+	SUM(CASE WHEN antibiotic_drug_flag='Y'THEN total_drug_cost END) AS antibiotic_total_cost
+FROM drug
+LEFT JOIN prescription
+USING (drug_name);
+
+--ANSWER: Opioids: 105,080,626.37 > Antibiotics: 38,435,121.26
 
 -- 5. 
 --     a. How many CBSAs are in Tennessee? **Warning:** The cbsa table contains information for all states, not just Tennessee.
 
+SELECT
 --     b. Which cbsa has the largest combined population? Which has the smallest? Report the CBSA name and total population.
 
 --     c. What is the largest (in terms of population) county which is not included in a CBSA? Report the county name and population.
