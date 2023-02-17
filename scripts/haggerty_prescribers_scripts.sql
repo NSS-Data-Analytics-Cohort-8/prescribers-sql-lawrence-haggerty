@@ -220,8 +220,47 @@ USING (drug_name);
 -- 5. 
 --     a. How many CBSAs are in Tennessee? **Warning:** The cbsa table contains information for all states, not just Tennessee.
 
-SELECT
+SELECT *
+FROM cbsa;
+--Review of CBSA Table
+
+SELECT 
+	cbsaname
+FROM cbsa
+WHERE cbsaname LIKE '%TN%'
+GROUP BY cbsaname;
+--Reminder can also use ILIKE if case sensitivity is a concern
+
+--ANSWER: 10 CBSAs in TN
+
 --     b. Which cbsa has the largest combined population? Which has the smallest? Report the CBSA name and total population.
+
+SELECT *
+FROM population;
+--Review population table
+
+SELECT 
+	DISTINCT cbsa,
+	SUM(population) as cbsa_combined_pop
+FROM cbsa
+INNER JOIN population
+USING (fipscounty)
+WHERE cbsaname LIKE '%TN%'
+GROUP BY cbsa, population
+ORDER by cbsa;
+--Round 1...Multiple Returns for Each CBSA
+
+SELECT 
+	DISTINCT cbsa,
+	(SELECT SUM(population) 
+	 FROM population
+	 WHERE cbsa.fipscounty=population.fipscounty) as cbsa_combined_pop
+FROM cbsa
+WHERE cbsaname LIKE '%TN%'
+GROUP BY cbsa, cbsa.fipscounty;
+
+
+
 
 --     c. What is the largest (in terms of population) county which is not included in a CBSA? Report the county name and population.
 
