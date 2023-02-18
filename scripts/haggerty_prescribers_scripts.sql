@@ -129,6 +129,30 @@ LIMIT 5;
 
 --     c. **Challenge Question:** Are there any specialties that appear in the prescriber table that have no associated prescriptions in the prescription table?
 
+SELECT specialty_description AS specialty,
+	SUM(total_claim_count) AS sum_opioid_claims
+FROM prescriber
+LEFT JOIN prescription
+USING (npi)
+LEFT JOIN drug
+USING (drug_name)
+WHERE opioid_drug_flag='Y' AND total_claim_count IS NULL
+GROUP BY specialty
+ORDER BY sum_opioid_claims DESC;
+--Returns 0 Results
+
+SELECT specialty_description AS specialty,
+	SUM(total_claim_count) AS sum_opioid_claims
+FROM prescriber
+LEFT JOIN prescription
+USING (npi)
+LEFT JOIN drug
+USING (drug_name)
+WHERE total_claim_count IS NULL
+GROUP BY specialty
+ORDER BY sum_opioid_claims DESC;
+--Returns 92 rows of specialties w/ no claims
+
 --     d. **Difficult Bonus:** *Do not attempt until you have solved all other problems!* For each specialty, report the percentage of total claims by that specialty which are for opioids. Which specialties have a high percentage of opioids?
 
 -- 3. 
@@ -373,6 +397,7 @@ WHERE opioid_drug_flag='Y' AND
 	 prescriber.nppes_provider_city='NASHVILLE'
 GROUP BY prescriber.npi, drug.drug_name;
 --cleaner / shorter query....use this one
+--returns 637 rows
 
 --     b. Next, report the number of claims per drug per prescriber. Be sure to include all combinations, whether or not the prescriber had any claims. You should report the npi, the drug name, and the number of claims (total_claim_count).
 
@@ -392,7 +417,7 @@ WHERE d.opioid_drug_flag='Y' AND
 	 p1.nppes_provider_city='NASHVILLE'
 GROUP BY p1.npi, d.drug_name 
 ORDER BY total_count DESC;
---Removing Pain Management Shows NULLS in values...meaning 
+--Removing Pain Management Shows NULLS in values...  
 
 SELECT 
 	p1.npi,
@@ -407,23 +432,27 @@ WHERE d.opioid_drug_flag='Y' AND
 	 p1.nppes_provider_city='NASHVILLE'
 GROUP BY p1.npi, d.drug_name
 ORDER BY total_count ASC;
---Calculates same total cost per npi....continue to troubleshoot
+--Calculates same total cost per npi....continue to troubleshoot / look at JOINs
 
 SELECT 
 	p1.npi,
 	d.drug_name,
-	SUM(p2.total_claim_count) AS total_count
+	SUM(p2.total_claim_count) AS total_count 
 FROM prescriber AS p1
 CROSS JOIN drug AS d
 LEFT JOIN prescription AS p2
-USING (npi)
+ON d.drug_name=p2.drug_name
 WHERE d.opioid_drug_flag='Y' AND
 	 p1.specialty_description='Pain Management' AND
 	 p1.nppes_provider_city='NASHVILLE'
 GROUP BY p1.npi, d.drug_name
-ORDER BY total_count ASC;
+ORDER BY total_count DESC;
+--BUENO!!!
 
 
+
+    
+--     c. Finally, if you have not done so already, fill in any missing values for total_claim_count with 0. Hint - Google the COALESCE function.
 
 SELECT 
 	p1.npi,
@@ -432,13 +461,11 @@ SELECT
 FROM prescriber AS p1
 CROSS JOIN drug AS d
 LEFT JOIN prescription AS p2
-USING (npi)
+ON d.drug_name=p2.drug_name
 WHERE d.opioid_drug_flag='Y' AND
 	 p1.specialty_description='Pain Management' AND
 	 p1.nppes_provider_city='NASHVILLE'
 GROUP BY p1.npi, d.drug_name 
 ORDER BY total_count ASC;
----COALESCE PRACTICE
-
-    
---     c. Finally, if you have not done so already, fill in any missing values for total_claim_count with 0. Hint - Google the COALESCE function.
+---w/ COALESCE to fill in NULL w/ 0
+--Returns requested npi, the drug name, and the number of claims (total_claim_count) w/ 0 replacing NULLs
