@@ -139,10 +139,10 @@ USING (drug_name)
 WHERE opioid_drug_flag='Y' AND total_claim_count IS NULL
 GROUP BY specialty
 ORDER BY sum_opioid_claims DESC;
---Returns 0 Results
+--Returns 0 Results when considering the opioid flag
 
 SELECT specialty_description AS specialty,
-	SUM(total_claim_count) AS sum_opioid_claims
+	SUM(total_claim_count) AS sum_total_claims
 FROM prescriber
 LEFT JOIN prescription
 USING (npi)
@@ -150,10 +150,23 @@ LEFT JOIN drug
 USING (drug_name)
 WHERE total_claim_count IS NULL
 GROUP BY specialty
-ORDER BY sum_opioid_claims DESC;
---Returns 92 rows of specialties w/ no claims
+ORDER BY sum_total_claims DESC;
+--Returns 92 rows of specialties w/ no claims when not considering the opioid flag
 
 --     d. **Difficult Bonus:** *Do not attempt until you have solved all other problems!* For each specialty, report the percentage of total claims by that specialty which are for opioids. Which specialties have a high percentage of opioids?
+SELECT
+	specialty_description AS specialty,
+	SUM(total_claim_count)AS total_spec_opioid_claims
+FROM prescriber
+LEFT JOIN prescription
+USING (npi)
+LEFT JOIN drug
+USING (drug_name)
+WHERE opioid_drug_flag='Y' 
+GROUP BY specialty
+ORDER BY total_spec_opioid_claims DESC;
+
+
 
 -- 3. 
 --     a. Which drug (generic_name) had the highest total drug cost?
@@ -169,8 +182,8 @@ ORDER BY total_drug_cost DESC;
 
 SELECT generic_name AS drug,
 	total_drug_cost 
-FROM drug
-INNER JOIN prescription
+FROM prescription
+INNER JOIN drug
 USING (drug_name)
 GROUP BY drug, total_drug_cost
 ORDER BY total_drug_cost DESC;
@@ -182,7 +195,7 @@ FROM prescription
 LEFT JOIN drug
 USING (drug_name)
 GROUP BY drug, total_drug_cost
-ORDER BY total_drug_cost DESC;
+ORDER BY total_drug_cost DESC
 LIMIT 1;
 --LEFT JOIN of drug to prescription returned the same as INNER JOIN above. 
 
@@ -200,14 +213,23 @@ FROM prescription;
 --total_day_supply – The aggregate number of day’s supply for which this drug was dispensed.
 
 SELECT generic_name,
-	ROUND(AVG(total_drug_cost/total_30_day_fill_count),2) AS daily_cost
+	ROUND(total_drug_cost/total_30_day_fill_count,2) AS daily_cost
 FROM prescription
 LEFT JOIN drug
 USING (drug_name)
-GROUP BY generic_name
+GROUP BY generic_name, total_drug_cost, total_30_day_fill_count
 ORDER BY daily_cost DESC;
----Continue to Review
----******************
+---not sure this is right using 30 day fill count??? try another column...
+
+SELECT generic_name,
+	ROUND(total_drug_cost/total_day_supply,2) AS daily_cost
+FROM prescription
+LEFT JOIN drug
+USING (drug_name)
+GROUP BY generic_name, total_drug_cost, total_day_supply
+ORDER BY daily_cost DESC;
+--ANSWER: "IMMUN GLOB G(IGG)/GLY/IGA OV50" / 7141.11
+
 
 -- 4. 
 --     a. For each drug in the drug table, return the drug name and then a column named 'drug_type' which says 'opioid' for drugs which have opioid_drug_flag = 'Y', says 'antibiotic' for those drugs which have antibiotic_drug_flag = 'Y', and says 'neither' for all other drugs.
@@ -448,7 +470,7 @@ WHERE d.opioid_drug_flag='Y' AND
 GROUP BY p1.npi, d.drug_name
 ORDER BY total_count DESC;
 --BUENO!!!
-
+--Returns requested npi, the drug name, and the number of claims (total_claim_count) w/ NULLs
 
 
     
