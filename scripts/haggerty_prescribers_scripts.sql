@@ -338,10 +338,107 @@ ORDER BY total_claim_count DESC;
 --Answer: query above returns the requested info
 --9 rows (w/ opioid notation) of info. top result: OXYCODONE / 4538 / DAVID COFFEY, bottom result: LEVOTHYROXINE SODIUM / 3023 bottom result / BRUCE PENDLEY
 
+
 -- 7. The goal of this exercise is to generate a full list of all pain management specialists in Nashville and the number of claims they had for each opioid. **Hint:** The results from all 3 parts will have 637 rows.
 
 --     a. First, create a list of all npi/drug_name combinations for pain management specialists (specialty_description = 'Pain Managment') in the city of Nashville (nppes_provider_city = 'NASHVILLE'), where the drug is an opioid (opiod_drug_flag = 'Y'). **Warning:** Double-check your query before running it. You will only need to use the prescriber and drug tables since you don't need the claims numbers yet.
 
+--FULL JOIN combines a LEFT JOIN and a RIGHT JOIN
+--CROSS JOIN creates all possible combinations of two tables.
+--UNION takes two tables as input, and returns all records from both tables (UNION ALL INCLUDES DUPLICATES)
+--npi – National Provider Identifier
+
+SELECT 
+	prescriber.npi,
+	drug.drug_name
+FROM prescriber
+CROSS JOIN drug
+WHERE drug.drug_name IN
+	(SELECT drug_name
+	 FROM drug
+	 WHERE opioid_drug_flag='Y') AND
+	 prescriber.specialty_description='Pain Management' AND
+	 prescriber.nppes_provider_city='NASHVILLE'
+GROUP BY prescriber.npi, drug.drug_name;
+
+--attempt query w/o subquery in WHERE
+
+SELECT 
+	DISTINCT prescriber.npi,
+	drug.drug_name
+FROM prescriber
+CROSS JOIN drug
+WHERE opioid_drug_flag='Y' AND
+	 prescriber.specialty_description='Pain Management' AND
+	 prescriber.nppes_provider_city='NASHVILLE'
+GROUP BY prescriber.npi, drug.drug_name;
+--cleaner / shorter query....use this one
+
 --     b. Next, report the number of claims per drug per prescriber. Be sure to include all combinations, whether or not the prescriber had any claims. You should report the npi, the drug name, and the number of claims (total_claim_count).
+
+--CROSS JOIN creates all possible combinations of two tables.
+--LEFT JOIN will return all records in the left table, and those records in the right table that match on the joining field provided
+--FULL JOIN combines a LEFT JOIN and a RIGHT JOIN
+
+SELECT 
+	p1.npi,
+	d.drug_name,
+	SUM(p2.total_claim_count) AS total_count
+FROM prescriber AS p1
+CROSS JOIN drug AS d
+LEFT JOIN prescription AS p2
+USING (npi)
+WHERE d.opioid_drug_flag='Y' AND
+	 p1.nppes_provider_city='NASHVILLE'
+GROUP BY p1.npi, d.drug_name 
+ORDER BY total_count DESC;
+--Removing Pain Management Shows NULLS in values...meaning 
+
+SELECT 
+	p1.npi,
+	d.drug_name,
+	SUM(p2.total_claim_count) AS total_count 
+FROM prescriber AS p1
+CROSS JOIN drug AS d
+LEFT JOIN prescription AS p2
+USING (npi)
+WHERE d.opioid_drug_flag='Y' AND
+	 p1.specialty_description='Pain Management' AND
+	 p1.nppes_provider_city='NASHVILLE'
+GROUP BY p1.npi, d.drug_name
+ORDER BY total_count ASC;
+--Calculates same total cost per npi....continue to troubleshoot
+
+SELECT 
+	p1.npi,
+	d.drug_name,
+	SUM(p2.total_claim_count) AS total_count
+FROM prescriber AS p1
+CROSS JOIN drug AS d
+LEFT JOIN prescription AS p2
+USING (npi)
+WHERE d.opioid_drug_flag='Y' AND
+	 p1.specialty_description='Pain Management' AND
+	 p1.nppes_provider_city='NASHVILLE'
+GROUP BY p1.npi, d.drug_name
+ORDER BY total_count ASC;
+
+
+
+SELECT 
+	p1.npi,
+	d.drug_name,
+	COALESCE(SUM(p2.total_claim_count),0) AS total_count
+FROM prescriber AS p1
+CROSS JOIN drug AS d
+LEFT JOIN prescription AS p2
+USING (npi)
+WHERE d.opioid_drug_flag='Y' AND
+	 p1.specialty_description='Pain Management' AND
+	 p1.nppes_provider_city='NASHVILLE'
+GROUP BY p1.npi, d.drug_name 
+ORDER BY total_count ASC;
+---COALESCE PRACTICE
+
     
 --     c. Finally, if you have not done so already, fill in any missing values for total_claim_count with 0. Hint - Google the COALESCE function.
