@@ -139,7 +139,7 @@ USING (drug_name)
 WHERE opioid_drug_flag='Y' AND total_claim_count IS NULL
 GROUP BY specialty
 ORDER BY sum_opioid_claims DESC;
---Returns 0 Results when considering the opioid flag
+--Returns 0 Results when filtering on the opioid flag
 
 SELECT specialty_description AS specialty,
 	SUM(total_claim_count) AS sum_total_claims
@@ -151,10 +151,21 @@ USING (drug_name)
 WHERE total_claim_count IS NULL
 GROUP BY specialty
 ORDER BY sum_total_claims DESC;
---Returns 92 rows of specialties w/ no claims when not considering the opioid flag
+--Returns 92 rows of specialties w/ no claims when not filtering on the opioid flag
 
 --     d. **Difficult Bonus:** *Do not attempt until you have solved all other problems!* For each specialty, report the percentage of total claims by that specialty which are for opioids. Which specialties have a high percentage of opioids?
-SELECT
+
+WITH oc1 AS (SELECT
+			 specialty_description AS specialty,
+	SUM(CASE WHEN opioid_drug_flag='Y' THEN total_claim_count END) AS total_opioid_claim 
+FROM drug
+LEFT JOIN prescription
+ON drug.drug_name=prescription.drug_name
+LEFT JOIN prescriber
+ON prescription.npi=prescriber.npi
+GROUP BY specialty),
+
+sc1 AS (SELECT
 	specialty_description AS specialty,
 	SUM(total_claim_count)AS total_spec_opioid_claims
 FROM prescriber
@@ -162,9 +173,20 @@ LEFT JOIN prescription
 USING (npi)
 LEFT JOIN drug
 USING (drug_name)
-WHERE opioid_drug_flag='Y' 
-GROUP BY specialty
-ORDER BY total_spec_opioid_claims DESC;
+WHERE opioid_drug_flag='Y'
+GROUP BY specialty)
+
+SELECT
+	specialty_description AS specialty,
+	oc1.total_opioid_claim,
+	sc1.total_spec_opioid_claims
+FROM prescriber
+INNER JOIN oc1
+ON prescriber.specialty=oc1.specialty
+INNER JOIN sc1
+ON prescriber.specialty=sc1.specialty
+GROUP BY specialty;
+
 
 
 
@@ -220,6 +242,7 @@ USING (drug_name)
 GROUP BY generic_name, total_drug_cost, total_30_day_fill_count
 ORDER BY daily_cost DESC;
 ---not sure this is right using 30 day fill count??? try another column...
+---follow-up: above returns 30 day cost not daily.
 
 SELECT generic_name,
 	ROUND(total_drug_cost/total_day_supply,2) AS daily_cost
@@ -229,7 +252,6 @@ USING (drug_name)
 GROUP BY generic_name, total_drug_cost, total_day_supply
 ORDER BY daily_cost DESC;
 --ANSWER: "IMMUN GLOB G(IGG)/GLY/IGA OV50" / 7141.11
-
 
 -- 4. 
 --     a. For each drug in the drug table, return the drug name and then a column named 'drug_type' which says 'opioid' for drugs which have opioid_drug_flag = 'Y', says 'antibiotic' for those drugs which have antibiotic_drug_flag = 'Y', and says 'neither' for all other drugs.
